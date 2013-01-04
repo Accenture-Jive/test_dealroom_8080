@@ -1,0 +1,837 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd"> 
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en"> 
+<head>
+  <script type="text/javascript" src="js/jquery.loadmask.js"></script>
+    <script type="text/javascript" src="js/jquery.datepick.js"></script>
+	<link href="css/jquery.loadmask.css" rel="stylesheet" type="text/css" />
+<link type="text/css" href="css/custom-theme/jquery-ui-1.8.16.custom.css" rel="stylesheet"/>
+<link type="text/css" href="css/custom-theme/jive-elements.css" rel="stylesheet"/>
+<link type="text/css" href="css/custom-theme/jive-icons.css" rel="stylesheet"/>
+<link type="text/css" href="css/security-groups.css" rel="stylesheet"/>
+<link type="text/css" href="style.css" rel="stylesheet"/>
+<LINK href="css/jquery.datepick.css" rel="stylesheet" type="text/css">		
+<link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/base/jquery-ui.css" rel="stylesheet" type="text/css"/>
+  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"></script>
+  <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/jquery-ui.min.js"></script>
+
+  <script type="text/javascript">
+
+  var loggedUser='';
+  	function showLoading() 
+	{
+		//console.log("inside show loading");
+		$("#maskLoad").mask("Please Wait...");
+	}
+
+	function hideLoading() 
+	{
+		//console.log("inside hide loading");
+		$("#maskLoad").unmask();
+	}   
+	
+	function onPageLoad() 
+	{
+	   osapi.people.get({
+		userId : '@me'
+		}).execute(function(response) {
+       // alert(JSON.stringify(response));
+		loggedUser =response.id; 
+		//alert("loggedUser: "+loggedUser);
+			   });
+			   
+	}
+	
+  </script>  
+ 
+ <script type="text/javascript">
+
+ $(function() {
+	$('#project-start-date').datepick();
+	$('#project-due-date').datepick();	
+ });
+ 
+ 
+
+  var group_name='';
+var start_date='';
+// Templates' IDs for the current AI instance
+var templateSpace = "/places/2201"; //actually, a SPACE
+var templateSpaceBlog = "/places";
+var test = "/places/2201/activities";
+var tempURI="/statics/places/2201";
+
+var templateSpaceURI = "https://apps-public-cloud-trunk.jivesoftware.com/groups/deal-room-template-group";
+var templateProject = "/places/2294";
+var templateProjectTasks = "/places/2203";
+var templateSpaceBlogs = "/places/1233";
+var templateProjectURI = "https://apps-public-cloud-trunk.jivesoftware.com/groups/deal-room-template-group/projects/rfp-response-template";
+
+// Flag indicating we are in add mode
+var adding = true;
+
+// Jive Group selector
+var group;
+var sourceSpace;
+
+// Jive Project selector
+var project;
+var sourceProject;
+
+// Factory for mini messages
+var mini;
+
+// IDs
+var targetGroupID = "";
+var targetGroup="";
+var targetProjID = "";
+
+// On view load, wire up static actions and retrieve initial data
+function init() {
+//console.log("intializing1...........");
+    //osapi.jive.corev3.people.getViewer({}).execute(function(response) {});
+	//console.log("intializing2...........");
+    //$("#group-create-button").click(onGroupSave);
+	//console.log("intializing...........");
+    mini = new gadgets.MiniMessage();
+}
+
+
+/* use a function for the exact format desired... */
+/* for ISO 8601 Date */
+function ISODateString(d){
+  function pad(n){return n<10 ? '0'+n : n}
+  return d.getUTCFullYear()+'-'
+      + pad(d.getUTCMonth()+1)+'-'
+      + pad(d.getUTCDate())+'T'
+      + pad(d.getUTCHours())+':'
+      + pad(d.getUTCMinutes())+':'
+      + pad(d.getUTCSeconds())+'.000+0000'
+}
+
+function onContentCreated (response) {
+    if (response.error) {
+        //mini.createDismissibleMessage("Unable to create discussions: " + response.error.message);
+		mini.createTimerMessage("<div style='text-align:center;'>Unable to create discussions: " + response.error.message+"</div>", 4);
+        return;
+    }
+}
+
+//Loading Discussions
+function onDiscFetch(response) {
+    if (response.error) {
+       // mini.createDismissibleMessage("Unable to fetch discussions: " + response.error.message);
+		mini.createTimerMessage("<div style='text-align:center;'>Unable to fetch discussions: " + response.error.message+"</div>", 4);
+        return;
+    }
+    var discussions = response.list;
+	var postDisc;
+	
+	$.each(discussions, function(index, group) {
+	postDisc = {
+	type : "",
+	tags : [],
+	subject : "",
+	content : {
+		text : "",
+		type : ""
+	},
+	question : ""//,
+	//parent : ""
+	}
+	postDisc.type = group.type;
+	postDisc.tags = group.tags;
+	postDisc.subject = group.subject;
+	postDisc.content = group.content;
+	postDisc.question = group.question;
+	postDisc.parent = targetGroupID;
+	//console.log ("Discussion "+index+" :"+JSON.stringify(postDisc));
+	osapi.jive.corev3.discussions.create(postDisc).execute(onContentCreated);
+	});
+    //console.log ("Discussions: "+JSON.stringify(discussions));
+}
+
+
+//Loading Project Discussions
+function onProjDiscFetch(response) {
+    if (response.error) {
+        //mini.createDismissibleMessage("Unable to fetch project discussions: " + response.error.message);
+        mini.createTimerMessage("<div style='text-align:center;'>Unable to fetch project discussions: " + response.error.message+"</div>", 4);
+		return;
+    }
+    var discussions = response.list;
+	var postDisc;
+	
+	$.each(discussions, function(index, group) {
+	postDisc = {
+	type : "",
+	tags : [],
+	subject : "",
+	content : {
+		text : "",
+		type : ""
+	},
+	question : "",
+	parent : ""
+	}
+	
+	postDisc.type = group.type;
+	postDisc.tags = group.tags;
+	postDisc.subject = group.subject;
+	postDisc.content = group.content;
+	postDisc.question = group.question;
+	postDisc.parent = targetProjID;
+	//console.log ("Discussion "+index+" :"+JSON.stringify(postDisc));
+	osapi.jive.corev3.discussions.create(postDisc).execute(onContentCreated);
+	});
+    //console.log ("Project Discussions: "+JSON.stringify(discussions));
+}
+
+//Fetching Documents
+function onDocFetch(response) {
+    if (response.error) {
+        //mini.createDismissibleMessage("Unable to fetch documents: " + response.error.message);
+		mini.createTimerMessage("<div style='text-align:center;'>Unable to fetch documents: " + response.error.message+"</div>", 4);
+        return;
+    }
+    var documents = response.list;
+	//console.log ("Documents: "+JSON.stringify(documents));
+	var postDoc;
+	
+	$.each(documents, function(index, group) {
+	postDoc = {
+	type : "",
+	tags : [],
+	subject : "",
+	attachments:[],
+	content : {
+		text : "",
+		type : ""
+	},
+	question : "",
+	parent : ""
+	}
+	
+	postDoc.type = group.type;
+	postDoc.tags = group.tags;
+	postDoc.subject = group.subject;
+	postDoc.attachments = group.attachments;
+	postDoc.content = group.content;
+	postDoc.question = group.question;
+	postDoc.parent = targetGroupID;
+	//console.log ("Document "+index+" :"+JSON.stringify(postDoc));
+	osapi.jive.corev3.documents.create(postDoc).execute(onContentCreated);
+	});
+    //console.log ("Final Documents: "+JSON.stringify(documents));
+	/* var request = osapi.jive.corev3.places.get({});
+	// execute the request
+    request.execute(function (response) {
+	var res= response.list;
+	console.log ("Response: "+JSON.stringify(res));
+		console.log ("Response: "+JSON.stringify(response.status));
+	}); */
+            var jdoc = new  osapi.jive.corev3.places.Blog();
+			console.log ("Blog :"+JSON.stringify(jdoc));
+            jdoc.name = "My New Personal Blog";
+			 jdoc.displayName = 'Suresh Peddapu';
+			 jdoc.parent = templateSpace;
+			 request = osapi.jive.corev3.blogs.create(jdoc);
+
+            // Execute the request
+            request.execute(function (response) {
+                console.log("SAVED_DOC", response.content.text);
+            });
+			var check=osapi.jive.corev3.places.Project;
+var name = check.name;
+console.log("NAME: "+name);
+			
+}
+
+
+//Fetching Project Documents
+function onProjDocFetch(response) {
+    if (response.error) {
+        //mini.createDismissibleMessage("Unable to fetch project documents: " + response.error.message);
+		mini.createTimerMessage("<div style='text-align:center;'>Unable to fetch project documents: " + response.error.message+"</div>", 4);
+        return;
+    }
+    var documents = response.list;
+	//console.log ("Project Documents: "+JSON.stringify(documents));
+	var postDoc;
+	
+	$.each(documents, function(index, group) {
+	postDoc = {
+	type : "",
+	tags : [],
+	subject : "",
+	content : {
+		text : "",
+		type : ""
+	},
+	question : "",
+	parent : ""
+	}
+	
+	postDoc.type = group.type;
+	postDoc.tags = group.tags;
+	postDoc.subject = group.subject;
+	postDoc.content = group.content;
+	postDoc.question = group.question;
+	postDoc.parent = targetProjID;
+	//console.log ("Document "+index+" :"+JSON.stringify(postDoc));
+	osapi.jive.corev3.documents.create(postDoc).execute(onContentCreated);
+	});
+    //console.log ("Final Documents: "+JSON.stringify(documents));
+}
+
+//Fetching Tasks
+function onTaskFetch(response) {
+    if (response.error) {
+        //mini.createDismissibleMessage("Unable to fetch tasks: " + response.error.message);
+		mini.createTimerMessage("<div style='text-align:center;'>Unable to fetch tasks: " + response.error.message+"</div>", 4);
+        return;
+    }
+    var tasks = response.list;
+	//console.log ("Tasks: "+JSON.stringify(tasks));
+	var postTask;
+	
+	$.each(tasks, function(index, group) {
+	postTask = {
+	type : "",
+	subject : "",
+	content : {
+		text : "",
+		type : ""
+	},
+	dueDate : "",
+	parent : ""
+	}
+	
+	postTask.type = group.type;
+	postTask.dueDate = group.dueDate;
+	postTask.subject = group.subject;
+	postTask.content = group.content;
+	postTask.parent = targetProjID;
+	//console.log ("Task "+index+" :"+JSON.stringify(postTask));
+	osapi.jive.corev3.tasks.create(postTask).execute(onContentCreated);
+	});
+    //console.log ("Final Tasks: "+JSON.stringify(tasks));
+}
+
+//Fetching Files
+function onFileFetch(response) {
+    if (response.error) {
+        //mini.createDismissibleMessage("Unable to fetch files: " + response.error.message);
+		mini.createTimerMessage("<div style='text-align:center;'>Unable to fetch files: " + response.error.message+"</div>", 4);
+        return;
+    }
+    var files = response.list;
+	console.log ("Files: "+JSON.stringify(files));
+	var postFile;
+	
+	$.each(files, function(index, group) {
+	postFile = {
+	
+	type : "",
+	filename : "",
+	uri : ""
+	}
+	
+	postFile.type = group.type;
+	postFile.filename = group.filename;
+	postFile.uri = group.uri;
+	postFile.parent = targetGroupID;
+	//console.log ("File "+index+" :"+JSON.stringify(postFile));
+	osapi.jive.corev3.statics.create(postFile).execute(onContentCreated);
+	});
+    //console.log ("Final Files: "+JSON.stringify(files));
+}
+
+//Fetching Polls
+function onPollFetch(response) {
+    if (response.error) {
+        //mini.createDismissibleMessage("Unable to fetch polls: " + response.error.message);
+		mini.createTimerMessage("<div style='text-align:center;'>Unable to fetch polls: " + response.error.message+"</div>", 4);
+        return;
+    }
+    var polls = response.list;
+	var postPoll;
+	
+	$.each(polls, function(index, group) {
+	postPoll = {
+	type : "",
+	tags : [],
+	subject : "",
+	content : {
+		text : "",
+		type : ""
+	},
+	options :[],
+	parent : ""
+	}
+	
+	postPoll.type = group.type;
+	postPoll.tags = group.tags;
+	postPoll.subject = group.subject;
+	postPoll.content = group.content;
+	postPoll.options = group.options;
+	postPoll.parent = targetGroupID;
+	//console.log ("Poll "+index+" :"+JSON.stringify(postPoll));
+	osapi.jive.corev3.polls.create(postPoll).execute(onContentCreated);
+	});
+    //console.log ("Polls: "+JSON.stringify(polls));
+}
+
+//Fetching Check Points
+function onCheckPointFetch(response) {
+console.log ("::::::::::::inside onCheckPointFetch:::::::::: ");
+    if (response.error) {
+        //mini.createDismissibleMessage("Unable to fetch checkpoints: " + response.error.message);
+		mini.createTimerMessage("<div style='text-align:center;'>Unable to fetch checkpoints: " + response.error.message+"</div>", 4);
+        return;
+    }
+    var checkpoints = response.list;
+	console.log ("Check Points: "+JSON.stringify(checkpoints));
+	var postCheckpoint;
+	
+	$.each(checkpoints, function(index, group) {
+	postCheckpoint = {
+	name : "",
+	dueDate : ""
+	}
+	
+	postCheckpoint.name = group.name;
+	postCheckpoint.dueDate = group.dueDate;
+	//postCheckpoint.parent = targetGroupID;
+	//console.log ("CheckPoint "+index+" :"+JSON.stringify(postCheckpoint));
+	osapi.jive.corev3.checkPoints.create(postCheckpoint).execute(onContentCreated);
+	});
+    console.log ("Check Points: "+JSON.stringify(checkpoints));
+}
+
+//Fetching Blogs
+function onBlogFetch(response) {
+    if (response.error) {
+        //mini.createDismissibleMessage("Unable to fetch blogs: " + response.error.message);
+		mini.createTimerMessage("<div style='text-align:center;'>Unable to fetch blogs: " + response.error.message+"</div>", 4);
+        return;
+    }
+    var blogs = response.list;
+	//console.log ("Blogs: "+JSON.stringify(blogs));
+	var postBlog;
+	
+	$.each(blogs, function(index, group) {
+	postBlog = {
+	type : "",
+	name : "",
+	displayName : "",
+	parent : ""
+	}
+	
+	postBlog.type = group.type;
+	postBlog.name = group.name;
+	postBlog.displayName = group.name;
+	postBlog.question = group.question;
+	postBlog.parent = targetGroupID;
+	//console.log ("Blog "+index+" :"+JSON.stringify(postBlog));
+	//osapi.jive.corev3.blogs.create(postBlog).execute(onContentCreated);
+	});
+    //console.log ("Blogs: "+JSON.stringify(blogs));
+}
+
+//Fetching Blogs
+function onAttachmentFetch(response) {
+    if (response.error) {
+        //mini.createDismissibleMessage("Unable to fetch attachments: " + response.error.message);
+		mini.createTimerMessage("<div style='text-align:center;'>Unable to fetch attachments: " + response.error.message+"</div>", 4);
+        return;
+    }
+    var attachments = response.list;
+	var postAttachment;
+	
+	$.each(attachments, function(index, group) {
+	postAttachment = {
+	type : "",
+	doUpload : "",
+	contentType : "",	
+	subject : "",
+	content : {
+		text : "",
+		type : ""
+	},
+	url : ""
+	}
+	
+	postAttachment.type = group.type;
+	postAttachment.content = group.content;
+	postAttachment.subject = group.subject;
+	postAttachment.contentType = group.contentType;
+	postAttachment.url = group.url;
+	//console.log ("Attachment "+index+" :"+JSON.stringify(postAttachment));
+	osapi.jive.corev3.contents.create(postAttachment).execute(onContentCreated);
+	});
+    //console.log ("Attachments: "+JSON.stringify(attachments));
+}
+
+//Loading Discussions
+function loadDiscussions(source) {
+osapi.jive.corev3.discussions.get ({
+        fields : '@all',
+	place : source
+    }).execute(onDiscFetch);
+}
+
+//Loading Documents
+function loadDocuments(source) {
+osapi.jive.corev3.documents.get ({
+        fields : '@all',
+	place : source
+    }).execute(onDocFetch);
+}
+
+//Loading Project Discussions
+function loadProjDiscussions(source) {
+osapi.jive.corev3.discussions.get ({
+        fields : '@all',
+	place : source
+    }).execute(onProjDiscFetch);
+}
+
+//Loading Project Documents
+function loadProjDocuments(source) {
+osapi.jive.corev3.documents.get ({
+        fields : '@all',
+	place : source
+    }).execute(onProjDocFetch);
+}
+
+
+//Loading Tasks
+function loadTasks(source) {
+osapi.jive.corev3.tasks.get({
+        fields : '@all',
+	place : source
+    }).execute(onTaskFetch);
+}
+
+//Loading Files
+function loadFiles(source) {
+osapi.jive.corev3.statics.get({
+        fields : '@all',
+	uri : source
+    }).execute(onFileFetch);
+}
+
+//Loading Polls
+function loadPolls(source) {
+osapi.jive.corev3.polls.get({
+        fields : '@all',
+	place : source
+    }).execute(onPollFetch);
+}
+
+//Loading Check Points
+function loadCheckPoints(source) {
+osapi.jive.corev3.places.Project.getCheckpoints({
+        fields : '@all'//,
+	//place : source
+    }).execute(onCheckPointFetch);
+}
+
+//Loading Blogs
+function loadBlogs() {
+osapi.jive.corev3.blogs.get({
+        fields : '@all'//,
+	//place : source
+    }).execute(onBlogFetch);
+}
+
+//Loading Attachments
+function loadAttachments(source) {
+osapi.jive.corev3.attachments.get({
+        fields : '@all',
+		attachmentID : '1096',
+	uri : source
+    }).execute(onAttachmentFetch);
+}
+
+// Defines what needs to be done once Project is created
+
+function onProjectCreated(response) {
+	if (response.error) {
+	//mini.createDismissibleMessage("Error creating new social project: " + response.error.message);
+	mini.createTimerMessage("<div style='text-align:center;'>Error creating new social project: " + response.error.message+"</div>", 4);
+	}
+	else {
+	targetProjID = response.resources.self.ref;
+	//console.log("target project ID is:" +targetProjID);
+	//console.log("Project: "+JSON.stringify(response));
+	//mini.createDismissibleMessage("Project created with the ID: " + response.id);
+	//var gMessage = document.getElementById("response-message");
+	//gMessage.innerHTML = gMessage.innerHTML + "<br />Click <a href=\""+response.resources.html.ref+"\">here</a> to visit the Project";
+	loadTasks(templateProjectTasks);
+	//loadCheckPoints(templateProjectTasks);
+	loadProjDiscussions(templateProjectTasks);
+    loadProjDocuments(templateProjectTasks);
+	//document.location.href=targetGroup;
+	}
+}
+
+// Defines what needs to be done once group is created
+// 1. Copy the contents from template group to the new
+// 2. Create Project
+
+function onGroupCreated(response) {
+//alert("inside response");
+//console.log("inside on groupcreated metod............");
+	/*if (response.error) {
+	hideLoading();
+	//mini.createDismissibleMessage("Error creating new social group: " + response.error.message);
+    mini.createTimerMessage("<div style='text-align:center;'>Error creating new social group: " + response.error.message+"</div>", 4);	
+	}*/
+
+	/*else {
+	hideLoading();
+	mini.createTimerMessage("<div style='text-align:center;'>Group successfully created. You will now be redirected to the newly created group.</div>", 10);
+	//console.log("Group Created");
+	//console.log("Group: "+JSON.stringify(response));
+	//mini.createDismissibleMessage("Group created at: " + response.resources.html.ref);
+	
+	// Setting the GLOBAL so as to use it for the content-load
+	targetGroupID = response.resources.self.ref;
+	//console.log("target group ID is:" +targetGroupID);
+	targetGroup =response.resources.html.ref;
+	
+	alert(response);
+	
+	//var gMessage = document.getElementById("response-message");
+	//gMessage.innerHTML = "Group successfully created. <br /> Click <a href=\""+response.resources.html.ref+"\">here</a> to visit the group";
+	// Add GROUP Content-Copying here!
+	loadDiscussions(templateSpace);
+    loadDocuments(templateSpace);
+    //loadFiles(tempURI);	
+	loadPolls(templateSpace);
+	loadBlogs();
+	//loadAttachments(templateSpaceURI);
+	//Project creation within the newly created group
+	
+	var pStartDateEntry = $("#project-start-date").val(); //Project Start
+	var pStartDateAbs = new Date(pStartDateEntry);
+	var pStartDate = ISODateString(pStartDateAbs);
+	
+	var pDueDateEntry = $("#project-due-date").val(); //Project Start
+	var pDueDateAbs = new Date(pDueDateEntry);
+	var pDueDate = ISODateString(pDueDateAbs);
+	
+	var pName = response.name;
+	//var pParent = response.id;
+	var pParent = response.resources.self.ref;
+	//document.location.href=targetGroup;
+	
+	//Redirecting to particular group
+	//$('#stylized').fadeIn('slow',function()--You can also use 'slow' attribute instead of '1000'.
+	
+  $('#stylized').fadeIn(1000, function() {
+  window.setTimeout ( function() {    
+  $('#stylized').fadeOut(1000, function() { 
+  window.location = targetGroup; }) }, 10000);  
+  }); 
+  
+	project = {
+		"displayName": "",
+		"name": "",
+		"parent" : "",
+		"contentTypes" : [ "documents", "files", "discussions", "polls", "tasks","blog" ],
+		"startDate" : "",
+		"dueDate" : "",
+		"type" : "project"
+	};
+	
+	sourceProject = project;
+
+	project.displayName = pName;
+	project.name = "Project for " + pName;
+	project.parent = pParent;;
+	project.startDate = pStartDate;
+	project.dueDate = pDueDate;
+	
+	
+	//osapi.jive.corev3.projects.create(project).execute(onProjectCreated);
+	}*/
+//("RESPONSE:  "+JSON.stringify(response));
+//var str=document.getElementById('group-name').value;
+	//targetGroupID = response.resources.self.ref;
+	//alert("targetGroupID  :"+targetGroupID);
+	//targetGroup =response.resources.html.ref;
+	//alert("targetGroup  :"+targetGroup);
+	  $('#stylized').fadeIn(1000, function() {
+  window.setTimeout ( function() {    
+  $('#stylized').fadeOut(1000, function() { 
+  window.location = 'https://acn.jiveon.com/groups/'+group_name.toLowerCase()+"/projects/"+group_name.toLowerCase()+"-dealroom-project"; }) }, 10000);  
+  }); 
+}
+
+function onGroupSave() {
+//showLoading();
+
+
+
+  //  osapi.people.get({
+     //               userId : '@me'
+     //             }).execute(function(response) {
+                                                //alert("Select response is " + JSON.stringify(response));
+	//											})
+
+												
+												
+
+group_name=document.getElementById('group-name').value;
+start_date=document.getElementById('project-start-date').value;
+
+if (group_name=='')
+{
+alert("Please enter a Group Name.");
+}
+else
+{
+if (start_date=='')
+{
+alert("Please enter Start Date.")
+}
+else{
+
+//console.log("creating group............");
+    group = {
+        displayName : "",
+        description : "",
+        followerCount : 0,
+        groupType : "",
+        memberCount : 0,
+        name : "",
+        type : "group"
+    };
+	
+	
+
+  group.description = group_name;
+    group.description = "This is a deal room created for collaborating on the deal \"" + group.description + "\"";
+    group.displayName = group_name;
+    group.groupType = "PRIVATE";
+    group.contentTypes = [ "documents", "files", "discussions", "polls", "projects" ,"blog"];
+    group.name = group_name;
+  
+	my_form=document.createElement('FORM');
+	my_form.name='search-theme-form';
+	my_form.id='search-theme-form';
+	my_form.method='post';
+	my_form.action='http://ec2-54-246-36-246.eu-west-1.compute.amazonaws.com:8080/AIDealRoom/AIServlet?group-name='+group_name;
+	
+	document.body.appendChild(my_form);
+	//my_form.submit();
+	//alert("loggedUser: "+loggedUser);
+	osapi.http.get({
+    'href' : 'http://ec2-54-246-36-246.eu-west-1.compute.amazonaws.com:8080/AIDealRoom/AIServlet?group-name='+group_name+'&proj-start='+start_date+'&logged-user='+loggedUser,
+    'format' : 'json',
+    'authz' : 'signed'
+	}).execute(onGroupCreated);
+	}
+	}
+	
+}
+
+function refreshiframe() 
+  { 
+if (group_name!='' && start_date!='')
+{
+//alert("Redirecting");
+
+		osapi.http.get({
+			'href' : 'http://ec2-54-246-36-246.eu-west-1.compute.amazonaws.com:8080/AIDealRoom/LoggerServlet',
+			'format' : 'text',
+			'authz' : 'signed'
+	}).execute(refreshFrameResponse);
+	    
+	}
+	}
+	
+	
+	function refreshFrameResponse(response) {
+		refreshiframe();
+		var str=response.content;
+		var n=str.split(".");
+		
+		document.getElementById("frame1").contentDocument.body.style.fontFamily="Tahoma";	
+		document.getElementById("frame1").contentDocument.body.style.fontSize = "12px";
+		document.getElementById("frame1").contentDocument.body.style.color='Grey';
+		document.getElementById("frame1").contentDocument.body.innerHTML = n[0]+"."+ "<br>"+n[1]+"."+ "<br><br><span id='mySpan' style='font-weight:bold;'>"+n[2].fontcolor("#3778C7")+"</span>";
+		
+		
+		setTimeout("refreshiframe()",3000); 
+		
+	}
+jQuery.noConflict(); 
+// Register our on-view-load handler
+gadgets.util.registerOnLoadHandler(init);
+</script>
+</head>
+
+<body id="maskLoad" onLoad="onPageLoad()">
+
+<div id="stylized" class="myform" style="margin-top:70px;font-family:Tahoma">
+
+<table>
+
+<tr><legend>AI Deal Room Creator</legend></tr>
+
+<tr><td colspan="2">&nbsp;</td></tr>
+
+<tr>
+<td><label style="font-weight:normal;">Deal Room Name:</label></td>
+<td><input id="group-name" type="text" size="15"/></td>
+</tr>
+
+<tr><td colspan="2">&nbsp;</td></tr>		  
+
+<tr>
+<td><label style="font-weight:normal;">Project Start Date:</label></td>
+<td><input id="project-start-date" type="text" size="15"/></td>
+</tr>
+
+<tr><td colspan="2">&nbsp;</td></tr>
+
+<tr>
+<td>
+<div id="area_two" style="display:none">
+<label>Project Due Date:</label>
+</td>
+<td><input style="display:none" id="project-due-date" name="proj-end" type="text" size="15"/></td>
+</div>
+</tr>
+
+
+
+<tr><td colspan="2">&nbsp;</td></tr>
+
+</div>
+</table>
+<div  style="text-align:center;font-family:Tahoma;font-weight:bold;">
+
+<tr>	
+<td><input type="submit" id="group-create-button" size="50px"  onclick="javascript:onGroupSave();javascript:refreshiframe();" value="Create Deal Room"/></td>
+</tr>		
+
+<tr>
+<td colspan="2">
+<div class="spacer"></div>
+<div id="response-message"></div>
+</td>
+</tr>
+
+<iframe id="frame1" src = "" width="450" height="90" style="margin-top:0px;font-family:Tahoma">
+
+</iframe>
+
+<div id="footer" style="font-family:Tahoma">&copy; Accenture 2012-13</div>
+	
+</div>
+</body>
+</html>
