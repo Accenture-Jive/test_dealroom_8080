@@ -15,7 +15,7 @@
    - limitations under the License.
   -->
 <Module>
-    <ModulePrefs title="Deal Room test -2"
+    <ModulePrefs title="Deal Room test -Staging"
                 author="Accenture"
            description="Deal Room App">
         <Link rel="Icon" href="group-icon.png"/>
