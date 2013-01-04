@@ -723,13 +723,13 @@ else{
 	my_form.name='search-theme-form';
 	my_form.id='search-theme-form';
 	my_form.method='post';
-	my_form.action='http://ec2-54-246-36-246.eu-west-1.compute.amazonaws.com:8080/AIDealRoom/AIServlet?group-name='+group_name;
+	my_form.action='http://ec2-54-246-36-246.eu-west-1.compute.amazonaws.com:8080/AIDealRoom-Staging/AIServlet?group-name='+group_name;
 	
 	document.body.appendChild(my_form);
 	//my_form.submit();
 	//alert("loggedUser: "+loggedUser);
 	osapi.http.get({
-    'href' : 'http://ec2-54-246-36-246.eu-west-1.compute.amazonaws.com:8080/AIDealRoom/AIServlet?group-name='+group_name+'&proj-start='+start_date+'&logged-user='+loggedUser,
+    'href' : 'http://ec2-54-246-36-246.eu-west-1.compute.amazonaws.com:8080/AIDealRoom-Staging/AIServlet?group-name='+group_name+'&proj-start='+start_date+'&logged-user='+loggedUser,
     'format' : 'json',
     'authz' : 'signed'
 	}).execute(onGroupCreated);
@@ -745,7 +745,7 @@ if (group_name!='' && start_date!='')
 //alert("Redirecting");
 
 		osapi.http.get({
-			'href' : 'http://ec2-54-246-36-246.eu-west-1.compute.amazonaws.com:8080/AIDealRoom/LoggerServlet',
+			'href' : 'http://ec2-54-246-36-246.eu-west-1.compute.amazonaws.com:8080/AIDealRoom-Staging/LoggerServlet',
 			'format' : 'text',
 			'authz' : 'signed'
 	}).execute(refreshFrameResponse);
