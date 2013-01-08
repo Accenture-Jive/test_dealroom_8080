@@ -17,6 +17,7 @@
   <script type="text/javascript">
 
   var loggedUser='';
+   var flag=false;
   	function showLoading() 
 	{
 		//console.log("inside show loading");
@@ -742,6 +743,7 @@ function refreshiframe()
   { 
 if (group_name!='' && start_date!='')
 {
+flag=true;
 //alert("Redirecting");
 
 		osapi.http.get({
@@ -755,7 +757,10 @@ if (group_name!='' && start_date!='')
 	
 	
 	function refreshFrameResponse(response) {
+		if(!flag)
+	{
 		refreshiframe();
+	}
 		var str=response.content;
 		var n=str.split(".");
 		
@@ -764,6 +769,16 @@ if (group_name!='' && start_date!='')
 		document.getElementById("frame1").contentDocument.body.style.color='Grey';
 		document.getElementById("frame1").contentDocument.body.innerHTML = n[0]+"."+ "<br>"+n[1]+"."+ "<br><br><span id='mySpan' style='font-weight:bold;'>"+n[2].fontcolor("#3778C7")+"</span>";
 		
+		var compare=group_name+"Group creation and copy documents done";
+		var pos=n[2].indexOf(compare);
+		if (pos!=-1)
+		{		
+		 $('#stylized').fadeIn(1000, function() {
+  window.setTimeout ( function() {    
+  $('#stylized').fadeOut(1000, function() { 
+  window.location = 'https://acn.jiveon.com/groups/'+group_name.toLowerCase()+'/projects/'+group_name.toLowerCase()+'-dealroom-project'; }) }, 1000);  
+  }); 
+		}
 		
 		setTimeout("refreshiframe()",3000); 
 		
