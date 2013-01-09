@@ -749,7 +749,7 @@ flag=true;
 //alert("Redirecting");
 
 		osapi.http.get({
-			'href' : 'http://ec2-54-246-36-246.eu-west-1.compute.amazonaws.com:8080/AIDealRoom-Staging/LoggerServlet?logged-user='+loggedUser+'&logged-userName='+loggedUserName',
+			'href' : 'http://ec2-54-246-36-246.eu-west-1.compute.amazonaws.com:8080/AIDealRoom-Staging/LoggerServlet?logged-user='+loggedUser+'&logged-userName='+loggedUserName,
 			'format' : 'text',
 			'authz' : 'signed'
 	}).execute(refreshFrameResponse);
